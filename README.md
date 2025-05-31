@@ -281,3 +281,48 @@ FLAG{D0nt_st0r3_s3cr3ts_in_b3@nsta1k!}
 ```
 
 ✅ **Privilege escalation complete. Final flag successfully retrieved from AWS Secrets Manager.**
+
+
+Theory: How This Privilege Escalation Works
+This CloudGoat scenario demonstrates a realistic attack chain in which an attacker pivots from a low-privileged IAM user to full administrative control over an AWS account using exposed secrets within an Elastic Beanstalk environment.
+
+Key Concepts:
+1. Elastic Beanstalk Environment Variables
+Elastic Beanstalk allows environment variables to be configured for applications. However, if sensitive data like IAM credentials are placed in these variables, they can be accessed by anyone with permission to view the environment's configuration—posing a severe security risk.
+
+In this scenario, our low-privileged user had the ability to enumerate Beanstalk applications and extract environment variables. This led to the discovery of a second set of AWS keys.
+
+2. Lateral Movement with Discovered Credentials
+The leaked keys belonged to a second IAM user (cgidjyfk5bfoad_secondary_user) who had elevated IAM read and create permissions. This allowed us to:
+
+Enumerate all users, groups, and roles.
+
+Read and understand attached IAM policies.
+
+Create new access keys for other users.
+
+This is an example of lateral movement in the AWS environment—pivoting from one compromised identity to a more privileged one.
+
+3. IAM Misconfiguration and Escalation Path
+The secondary user’s policy allowed the following escalation technique:
+
+Use iam:CreateAccessKey on any user.
+
+Identify that cgidjyfk5bfoad_admin_user existed and had a policy granting full access (Action: "*").
+
+Create a new access key for that admin user, effectively giving us full admin rights.
+
+This is a textbook example of privilege escalation via IAM misconfiguration. Even without being in the Administrator group, the ability to create access keys for an admin user is equivalent to full account compromise.
+
+4. Post-Escalation Actions: Secrets Manager
+With full admin access, we were able to access AWS Secrets Manager to retrieve the final flag. This demonstrates how over-permissioned roles and weak secrets management can lead to complete data exposure.
+
+Lessons Learned:
+Never store IAM credentials in application-level environment variables.
+
+Apply the principle of least privilege: users should only be able to perform actions necessary for their role.
+
+Regularly audit IAM policies and attached users for excessive permissions.
+
+Use Secrets Manager or Parameter Store with encryption for managing secrets securely.
+
